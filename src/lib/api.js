@@ -2,7 +2,21 @@ import { supabase } from "./supabaseClient";
 
 // ── Auth ─────────────────────────────────────────────────────────────────
 export async function signUp({ email, password }) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    // Without this, Supabase falls back to whatever "Site URL" is set in
+    // the dashboard (Authentication → URL Configuration) for where the
+    // confirmation email's link redirects back to — which defaults to
+    // http://localhost:3000 on a fresh project and, same lesson as
+    // APP_PUBLIC_URL, is wrong for every deployment except whichever one
+    // it happens to be hardcoded to. Deriving it from window.location.origin
+    // keeps it correct on this preview, the next preview, and production.
+    // Still requires the target actually be on Supabase's Redirect URLs
+    // allow-list (same dashboard page) — an unlisted URL falls back to the
+    // Site URL regardless of what's passed here.
+    options: { emailRedirectTo: window.location.origin },
+  });
   if (error) throw error;
   return data;
 }
