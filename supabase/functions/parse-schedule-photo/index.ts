@@ -8,11 +8,29 @@
 //
 // Requires a Supabase secret `ANTHROPIC_API_KEY` — not set yet in this
 // project. Calls 501 with a clear message until an admin adds one.
+//
+// Called via supabase.functions.invoke() from the app's own origin (a
+// different origin than *.supabase.co), so the browser sends a CORS
+// preflight OPTIONS request first. Without handling it and sending CORS
+// headers on every response, that preflight 405s and the browser blocks
+// the real POST before it ever reaches this function — surfaces in
+// supabase-js as the generic "Failed to send a request to the Edge
+// Function", not a clear CORS error. (Same fix already existed in
+// public-open-shifts; this function and notify-open-shift were missing it.)
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const MODEL = "claude-haiku-4-5-20251001";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
 }
 
 const SYSTEM_PROMPT = `You read photos of handwritten or printed clinic staff schedules and extract structured shift data.
@@ -34,6 +52,7 @@ Rules:
 - If handwriting is ambiguous, still make your best guess and note the uncertainty in "warnings" rather than omitting the row.`;
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
   if (!ANTHROPIC_API_KEY) {
     return json({ error: "Photo import isn't set up yet — add an ANTHROPIC_API_KEY secret in Supabase to enable it." }, 501);

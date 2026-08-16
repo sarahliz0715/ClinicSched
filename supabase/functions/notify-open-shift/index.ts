@@ -8,17 +8,34 @@
 // Called authenticated (verify_jwt stays on) via supabase.functions.invoke
 // from the app — RLS on the underlying tables (queried with the caller's
 // own JWT, not service role) is what keeps this scoped to the caller's org.
+//
+// Called from the app's own origin (a different origin than *.supabase.co),
+// so the browser sends a CORS preflight OPTIONS request first. Without
+// handling it and sending CORS headers on every response, that preflight
+// 405s and the browser blocks the real POST before it ever reaches this
+// function — surfaces in supabase-js as the generic "Failed to send a
+// request to the Edge Function", not a clear CORS error.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
 const APP_PUBLIC_URL = Deno.env.get("APP_PUBLIC_URL") || "";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
   if (!RESEND_API_KEY) {
     return json({ error: "Email isn't set up yet — add a RESEND_API_KEY secret in Supabase to enable notifications." }, 501);
