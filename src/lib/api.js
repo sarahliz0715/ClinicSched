@@ -40,15 +40,25 @@ export async function acceptInvite(token) {
 }
 
 // Loads the staff profile (role, org, name) for the signed-in user.
+//
+// Must filter by auth_user_id explicitly rather than relying on RLS alone:
+// the staff_select policy scopes to "every staff row in my org", not "my
+// row" — harmless for .select() lists elsewhere, but fatal here since a
+// bare .single() throws PGRST116 (PostgREST's code for "not exactly one
+// row", which fires for *multiple* rows just as much as zero) the moment a
+// second staff row (e.g. a pending invite) exists in the org. That got
+// misread as "not linked to an org yet" and sent an existing admin back to
+// onboarding. auth_user_id is unique on staff, so .maybeSingle() here is
+// always unambiguous: 0 rows or 1, never more.
 export async function fetchMyProfile() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
   const { data, error } = await supabase
     .from("staff")
     .select("*, organization:organizations(*)")
-    .single();
-  if (error) {
-    if (error.code === "PGRST116") return null; // no rows — not linked to an org yet
-    throw error;
-  }
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+  if (error) throw error;
   return data;
 }
 
