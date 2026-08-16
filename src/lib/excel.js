@@ -44,6 +44,27 @@ export function parseDate(val) {
   return null;
 }
 
+// Drops same-staff/same-date duplicates within one import batch (keeping
+// the first occurrence) instead of letting the whole batch insert fail
+// against the DB's shifts_staff_date_unique constraint on one bad row.
+// Only applies to rows with a matched staff_id — an unmatched name isn't
+// actually a known staff member yet, so there's nothing to double-book.
+function flagDoubleBookings(shifts, warnings) {
+  const seen = new Set();
+  const deduped = [];
+  shifts.forEach((s, i) => {
+    if (!s.staff_id) { deduped.push(s); return; }
+    const key = `${s.staff_id}|${s.date}`;
+    if (seen.has(key)) {
+      warnings.push(`Row ${i + 1}: ${s._importName} is already scheduled on ${s.date} elsewhere in this import — skipped to avoid double-booking.`);
+      return;
+    }
+    seen.add(key);
+    deduped.push(s);
+  });
+  return deduped;
+}
+
 // sites: [{id, name}], knownStaff: [{id, name}]
 export function parseWorkbook(wb, sites, knownStaff) {
   const shifts = [], warnings = [];
@@ -97,7 +118,7 @@ export function parseWorkbook(wb, sites, knownStaff) {
       });
     }
   });
-  return { shifts, warnings };
+  return { shifts: flagDoubleBookings(shifts, warnings), warnings };
 }
 
 // shifts: joined rows with .site (name) and .staff (name), sites: [{id,name}]
@@ -129,7 +150,7 @@ export function matchNamesAndSites(rawRows, sites, knownStaff) {
       status: "assigned",
     });
   });
-  return { shifts, warnings };
+  return { shifts: flagDoubleBookings(shifts, warnings), warnings };
 }
 
 export function exportToExcel(shifts, sites) {

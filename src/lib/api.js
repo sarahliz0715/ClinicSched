@@ -109,6 +109,17 @@ export async function deleteStaff(id) {
 // ── Shifts ───────────────────────────────────────────────────────────────
 const SHIFT_SELECT = "*, site:sites(*), staff:staff(*)";
 
+// A staff member can't hold two shifts on the same date — enforced by a DB
+// unique index (shifts_staff_date_unique) so it can't be bypassed via bulk
+// import, admin add, or self-claim. Translate the raw constraint violation
+// into something a user can actually read.
+function friendlyShiftError(error) {
+  if (error?.code === "23505" && error.message?.includes("shifts_staff_date_unique")) {
+    return new Error("That staff member already has a shift scheduled that day.");
+  }
+  return error;
+}
+
 export async function fetchShifts() {
   const { data, error } = await supabase.from("shifts").select(SHIFT_SELECT).order("date");
   if (error) throw error;
@@ -117,20 +128,20 @@ export async function fetchShifts() {
 
 export async function createShift(shift) {
   const { data, error } = await supabase.from("shifts").insert(shift).select(SHIFT_SELECT).single();
-  if (error) throw error;
+  if (error) throw friendlyShiftError(error);
   return data;
 }
 
 export async function createShifts(shifts) {
   if (!shifts.length) return [];
   const { data, error } = await supabase.from("shifts").insert(shifts).select(SHIFT_SELECT);
-  if (error) throw error;
+  if (error) throw friendlyShiftError(error);
   return data;
 }
 
 export async function updateShift(id, patch) {
   const { data, error } = await supabase.from("shifts").update(patch).eq("id", id).select(SHIFT_SELECT).single();
-  if (error) throw error;
+  if (error) throw friendlyShiftError(error);
   return data;
 }
 
@@ -148,7 +159,7 @@ export async function claimShiftForSelf(shiftId, staffId) {
     .eq("status", "open")
     .select(SHIFT_SELECT)
     .single();
-  if (error) throw error;
+  if (error) throw friendlyShiftError(error);
   return data;
 }
 
