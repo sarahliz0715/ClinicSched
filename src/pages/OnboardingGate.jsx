@@ -26,7 +26,10 @@ export default function OnboardingGate({ inviteToken: hashInviteToken, onDone })
       try {
         await acceptInvite(inviteToken);
         clearPendingInvite();
-        window.location.hash = "";
+        // Clears both ?invite= and any #invite/ leftover, not just the hash
+        // — a stale query param would otherwise re-trigger invite detection
+        // on the next reload.
+        window.history.replaceState(null, "", window.location.pathname);
         await onDone();
       } catch (e) {
         setErr(e.message || "That invite link is invalid or already used.");
@@ -58,7 +61,7 @@ export default function OnboardingGate({ inviteToken: hashInviteToken, onDone })
         <div style={{ background: "#fff", borderRadius: 16, padding: 32, maxWidth: 420, textAlign: "center" }}>
           <ErrBox err={err} />
           <p style={{ color: "#6b7280", fontSize: 14 }}>Ask whoever invited you for a fresh link, or set up your own organization instead.</p>
-          <button onClick={() => { clearPendingInvite(); window.location.hash = ""; setMode("form"); }} style={{ marginTop: 10, padding: "10px 20px", borderRadius: 8, border: "none", background: "#1e3a5f", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Set up a new organization</button>
+          <button onClick={() => { clearPendingInvite(); window.history.replaceState(null, "", window.location.pathname); setMode("form"); }} style={{ marginTop: 10, padding: "10px 20px", borderRadius: 8, border: "none", background: "#1e3a5f", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Set up a new organization</button>
           <div style={{ marginTop: 14 }}><a href="#" onClick={e => { e.preventDefault(); signOut(); }} style={{ fontSize: 12, color: "#9ca3af" }}>Sign out</a></div>
         </div>
       </div>

@@ -26,6 +26,19 @@ function useHash() {
   return hash;
 }
 
+// Prefers the ?invite=<token> query param (see SettingsPanel.jsx's
+// copyInvite — query params survive link-sharing channels far more
+// reliably than #hash fragments do) but still accepts the older
+// #invite/<token> form for links generated before that change. Read once
+// at mount, not reactively — the invite token only matters for the very
+// first load, before auth.
+function getInviteTokenFromUrl() {
+  const fromQuery = new URLSearchParams(window.location.search).get("invite");
+  if (fromQuery) return fromQuery;
+  const hash = window.location.hash;
+  return hash.startsWith("#invite/") ? hash.slice("#invite/".length) : null;
+}
+
 function AuthenticatedApp({ profile, refreshProfile }) {
   const [tab, setTab] = useState(profile.role === "admin" ? "admin" : "my");
   const [gcalConnected, setGcalConnected] = useState(false);
@@ -106,7 +119,7 @@ function AuthenticatedApp({ profile, refreshProfile }) {
 export default function App() {
   const hash = useHash();
   const { loading, session, profile, profileError, refreshProfile } = useAuth();
-  const inviteToken = hash.startsWith("#invite/") ? hash.slice("#invite/".length) : null;
+  const [inviteToken] = useState(getInviteTokenFromUrl);
   // A brand-new invitee needs Create Account, not Sign In — default there
   // when arriving via an invite link. Still just a toggle either way: see
   // Login.jsx/Signup.jsx for the "already have an account?" path back.

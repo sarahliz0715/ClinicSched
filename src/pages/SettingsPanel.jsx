@@ -45,7 +45,12 @@ export default function SettingsPanel({ org, sites, staff, profile, onRefresh })
   }
 
   function copyInvite(u) {
-    const link = `${APP_PUBLIC_URL}/#invite/${u.invite_token}`;
+    // Query param, not a #hash — hash fragments are the part of a URL most
+    // likely to get silently dropped or mangled by text messages, email
+    // clients, and link-preview/safe-link rewriters (nothing outside the
+    // browser has traditionally needed them). Query params survive far
+    // more reliably. App.jsx still accepts the old #invite/<token> form too.
+    const link = `${APP_PUBLIC_URL}/?invite=${u.invite_token}`;
     navigator.clipboard.writeText(link).then(() => { setCopiedId(u.id); setTimeout(() => setCopiedId(null), 2500); });
   }
 
