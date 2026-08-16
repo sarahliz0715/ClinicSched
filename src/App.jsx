@@ -12,6 +12,7 @@ import OpenShifts from "./pages/OpenShifts";
 import BySite from "./pages/BySite";
 import ByLead from "./pages/ByLead";
 import ExcelPanel from "./pages/ExcelPanel";
+import AddShift from "./pages/AddShift";
 import AdminPanel from "./pages/AdminPanel";
 import SettingsPanel from "./pages/SettingsPanel";
 
@@ -58,7 +59,11 @@ function AuthenticatedApp({ profile, refreshProfile }) {
     { id: "site", label: "By Site", icon: "🏥" },
     { id: "lead", label: "By Lead", icon: "👥" },
     { id: "excel", label: "Import/Export", icon: "🟢" },
-    ...(isAdmin ? [{ id: "admin", label: "Admin", icon: "⚙️" }, { id: "settings", label: "Settings", icon: "🛠️" }] : []),
+    ...(isAdmin ? [
+      { id: "addshift", label: "Add Shift", icon: "➕" },
+      { id: "admin", label: "Admin", icon: "⚙️" },
+      { id: "settings", label: "Settings", icon: "🛠️" },
+    ] : []),
   ];
 
   return (
@@ -88,6 +93,7 @@ function AuthenticatedApp({ profile, refreshProfile }) {
             {tab === "site" && <BySite shifts={shifts} sites={sites} staff={staff} />}
             {tab === "lead" && <ByLead shifts={shifts} staff={staff} />}
             {tab === "excel" && <ExcelPanel shifts={shifts} sites={sites} staff={staff} onRefresh={loadAll} />}
+            {tab === "addshift" && isAdmin && <AddShift shifts={shifts} sites={sites} staff={staff} onRefresh={loadAll} />}
             {tab === "admin" && isAdmin && <AdminPanel shifts={shifts} sites={sites} staff={staff} onRefresh={loadAll} />}
             {tab === "settings" && isAdmin && <SettingsPanel org={profile.organization} sites={sites} staff={staff} profile={profile} onRefresh={loadAll} />}
           </>

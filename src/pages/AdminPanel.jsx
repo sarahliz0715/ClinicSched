@@ -1,26 +1,16 @@
 import { useState } from "react";
 import { fmt, today } from "../lib/dates";
-import { siteColor, card, labelS, inputS } from "../lib/ui";
+import { siteColor, card, inputS } from "../lib/ui";
 import { Toast, useToast } from "../components/Shared";
-import { createShift, deleteShift } from "../lib/api";
+import { deleteShift } from "../lib/api";
 
+// The Add Shift form used to live here — it's now its own top-level tab
+// (src/pages/AddShift.jsx) since it was easy to miss buried below the
+// stat cards. This page stays focused on the stats + filterable shift list.
 export default function AdminPanel({ shifts, sites, staff, onRefresh }) {
-  const [form, setForm] = useState({ staffId: staff[0]?.id || "", site_id: sites[0]?.id || "", date: fmt(today), start_time: "07:00", end_time: "15:00", notes: "" });
   const [msg, clr, show] = useToast();
   const [fSite, setFSite] = useState("All");
   const [fStaff, setFStaff] = useState("All");
-
-  async function addShift() {
-    if (!form.staffId || !form.site_id || !form.date) return;
-    try {
-      await createShift({ staff_id: form.staffId, site_id: form.site_id, date: form.date, start_time: form.start_time, end_time: form.end_time, notes: form.notes, status: "assigned" });
-      show("✅ Shift added!", "#059669");
-      setForm(f => ({ ...f, notes: "" }));
-      onRefresh();
-    } catch (e) {
-      show("❌ " + e.message, "#dc2626");
-    }
-  }
 
   async function removeShift(id) {
     try { await deleteShift(id); onRefresh(); } catch (e) { show("❌ " + e.message, "#dc2626"); }
@@ -49,18 +39,6 @@ export default function AdminPanel({ shifts, sites, staff, onRefresh }) {
             <div style={{ fontSize: 12, color: "#6b7280" }}>{stat.label}</div>
           </div>
         ))}
-      </div>
-      <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 12, padding: 20, marginBottom: 24 }}>
-        <div style={{ fontWeight: 700, marginBottom: 14, color: "#0369a1" }}>➕ Add Shift</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12 }}>
-          <label style={labelS}>Staff<select value={form.staffId} onChange={e => setForm(f => ({ ...f, staffId: e.target.value }))} style={inputS}>{staff.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>
-          <label style={labelS}>Site<select value={form.site_id} onChange={e => setForm(f => ({ ...f, site_id: e.target.value }))} style={inputS}>{sites.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-          <label style={labelS}>Date<input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={inputS} /></label>
-          <label style={labelS}>Start<input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} style={inputS} /></label>
-          <label style={labelS}>End<input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} style={inputS} /></label>
-          <label style={labelS}>Notes<input type="text" placeholder="optional" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={inputS} /></label>
-        </div>
-        <button onClick={addShift} style={{ marginTop: 14, padding: "10px 24px", borderRadius: 8, border: "none", background: "#0369a1", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>Add Shift</button>
       </div>
       <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
         <select value={fStaff} onChange={e => setFStaff(e.target.value)} style={{ ...inputS, width: "auto" }}><option value="All">All Staff</option>{staff.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
