@@ -106,7 +106,11 @@ function AuthenticatedApp({ profile, refreshProfile }) {
 export default function App() {
   const hash = useHash();
   const { loading, session, profile, profileError, refreshProfile } = useAuth();
-  const [authView, setAuthView] = useState("login");
+  const inviteToken = hash.startsWith("#invite/") ? hash.slice("#invite/".length) : null;
+  // A brand-new invitee needs Create Account, not Sign In — default there
+  // when arriving via an invite link. Still just a toggle either way: see
+  // Login.jsx/Signup.jsx for the "already have an account?" path back.
+  const [authView, setAuthView] = useState(() => (inviteToken ? "signup" : "login"));
 
   if (hash.startsWith("#open/")) {
     return <PublicOpenShifts token={hash.slice("#open/".length)} />;
@@ -114,13 +118,11 @@ export default function App() {
 
   if (loading) return <Spinner />;
 
-  const inviteToken = hash.startsWith("#invite/") ? hash.slice("#invite/".length) : null;
-
   if (!session) {
-    const banner = inviteToken ? "You've been invited to join a clinic on ClinicSched — sign in or create an account to accept." : null;
+    const banner = inviteToken ? "You've been invited to join a clinic on ClinicSched." : null;
     return authView === "signup"
-      ? <Signup onGoLogin={() => setAuthView("login")} banner={banner} />
-      : <Login onGoSignup={() => setAuthView("signup")} banner={banner} />;
+      ? <Signup onGoLogin={() => setAuthView("login")} banner={banner} isInvite={!!inviteToken} inviteToken={inviteToken} />
+      : <Login onGoSignup={() => setAuthView("signup")} banner={banner} isInvite={!!inviteToken} />;
   }
 
   if (profileError) return <div style={{ padding: 40 }}><ErrBox err={profileError} /></div>;

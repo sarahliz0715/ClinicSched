@@ -39,6 +39,25 @@ export async function acceptInvite(token) {
   return data; // organization id
 }
 
+// If the Supabase project has "Confirm email" enabled, signUp() returns no
+// session and the eventual confirmation-link click can redirect back
+// without the #invite/<token> that was in the URL when they started — the
+// invite context would otherwise just be lost. Snapshotting it here (set
+// right before signUp() when starting from an invite link, read back by
+// OnboardingGate as a fallback when the URL hash doesn't have one, cleared
+// once actually consumed) survives that gap. Harmless no-op when
+// confirmation is off, since the hash is still intact in that case.
+const PENDING_INVITE_KEY = "clinicsched_pending_invite_token";
+export function savePendingInvite(token) {
+  if (token) localStorage.setItem(PENDING_INVITE_KEY, token);
+}
+export function readPendingInvite() {
+  return localStorage.getItem(PENDING_INVITE_KEY);
+}
+export function clearPendingInvite() {
+  localStorage.removeItem(PENDING_INVITE_KEY);
+}
+
 // Loads the staff profile (role, org, name) for the signed-in user.
 //
 // Must filter by auth_user_id explicitly rather than relying on RLS alone:

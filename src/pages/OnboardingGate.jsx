@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
-import { createOrganization, acceptInvite, signOut } from "../lib/api";
+import { createOrganization, acceptInvite, signOut, readPendingInvite, clearPendingInvite } from "../lib/api";
 import { Spinner, ErrBox } from "../components/Shared";
 
 // Shown for an authenticated user with no `staff` row yet — either a
 // brand-new signup (create an organization) or someone who followed a
 // staff invite link (link this account to the invite instead).
-export default function OnboardingGate({ inviteToken, onDone }) {
+//
+// `inviteToken` comes from the URL hash, but that can be lost — if the
+// Supabase project has "Confirm email" enabled, the confirmation-link
+// click redirects back without whatever hash was in the URL when signup
+// started. readPendingInvite() (src/lib/api.js) is the fallback: Signup.jsx
+// snapshots the token to localStorage right before calling signUp() when
+// starting from an invite link, so it survives that gap.
+export default function OnboardingGate({ inviteToken: hashInviteToken, onDone }) {
+  const [inviteToken] = useState(() => hashInviteToken || readPendingInvite());
   const [mode, setMode] = useState(inviteToken ? "accepting" : "form");
   const [orgName, setOrgName] = useState("");
   const [adminName, setAdminName] = useState("");
@@ -17,6 +25,7 @@ export default function OnboardingGate({ inviteToken, onDone }) {
     (async () => {
       try {
         await acceptInvite(inviteToken);
+        clearPendingInvite();
         window.location.hash = "";
         await onDone();
       } catch (e) {
@@ -32,6 +41,7 @@ export default function OnboardingGate({ inviteToken, onDone }) {
     setErr("");
     try {
       await createOrganization({ orgName: orgName.trim(), adminName: adminName.trim() });
+      clearPendingInvite();
       await onDone();
     } catch (e) {
       setErr(e.message || "Couldn't create your organization.");
@@ -48,7 +58,7 @@ export default function OnboardingGate({ inviteToken, onDone }) {
         <div style={{ background: "#fff", borderRadius: 16, padding: 32, maxWidth: 420, textAlign: "center" }}>
           <ErrBox err={err} />
           <p style={{ color: "#6b7280", fontSize: 14 }}>Ask whoever invited you for a fresh link, or set up your own organization instead.</p>
-          <button onClick={() => { window.location.hash = ""; setMode("form"); }} style={{ marginTop: 10, padding: "10px 20px", borderRadius: 8, border: "none", background: "#1e3a5f", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Set up a new organization</button>
+          <button onClick={() => { clearPendingInvite(); window.location.hash = ""; setMode("form"); }} style={{ marginTop: 10, padding: "10px 20px", borderRadius: 8, border: "none", background: "#1e3a5f", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Set up a new organization</button>
           <div style={{ marginTop: 14 }}><a href="#" onClick={e => { e.preventDefault(); signOut(); }} style={{ fontSize: 12, color: "#9ca3af" }}>Sign out</a></div>
         </div>
       </div>
