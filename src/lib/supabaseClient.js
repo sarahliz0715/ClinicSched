@@ -14,4 +14,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true },
 });
 
-export const APP_PUBLIC_URL = import.meta.env.VITE_APP_PUBLIC_URL || window.location.origin;
+// Deliberately NOT overridable by a VITE_APP_PUBLIC_URL env var: invite and
+// open-shift links must always point at whatever domain is actually serving
+// the app right now (a preview deployment, production, wherever) — a static
+// env var value is correct for exactly one of those and silently wrong for
+// every other one. A preview build previously baked in the production
+// domain this way, sending an invited staff member to the old prototype's
+// login screen instead of the real invite flow on the branch it was
+// actually created on.
+export const APP_PUBLIC_URL = window.location.origin;
