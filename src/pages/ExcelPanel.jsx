@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { fmt, today } from "../lib/dates";
 import { card } from "../lib/ui";
 import { parseWorkbook, matchNamesAndSites, exportToExcel, downloadTemplate } from "../lib/excel";
+import { exportICS } from "../lib/calendar";
 import { createShifts, parseSchedulePhoto } from "../lib/api";
 import { Toast, useToast } from "../components/Shared";
 
@@ -153,6 +154,15 @@ export default function ExcelPanel({ shifts, sites, staff, onRefresh }) {
           <button onClick={() => exportToExcel(shifts.filter(s => s.date >= fmt(today)), sites)} style={{ padding: "10px 22px", borderRadius: 8, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>Export Upcoming Only</button>
         </div>
         <div style={{ marginTop: 12, fontSize: 12, color: "#9ca3af" }}>{shifts.length} total shifts across {new Set(shifts.map(s => s.site_id)).size} sites</div>
+      </div>
+
+      <div style={{ ...card, marginTop: 20 }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "#1e3a5f", marginBottom: 4 }}>🗓 Export to Calendar</div>
+        <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>Download the schedule as a calendar file (.ics) — each shift labeled with its own staff member, importable into Google Calendar, Outlook, or Apple Calendar.</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={() => exportICS(shifts, null, undefined, "clinic-schedule.ics")} style={{ padding: "10px 22px", borderRadius: 8, border: "none", background: "#4285f4", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14 }}>🗓 Export All Shifts (.ics)</button>
+          <button onClick={() => exportICS(shifts.filter(s => s.date >= fmt(today)), null, undefined, "clinic-schedule-upcoming.ics")} style={{ padding: "10px 22px", borderRadius: 8, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>Export Upcoming Only</button>
+        </div>
       </div>
     </div>
   );
